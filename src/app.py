@@ -1,5 +1,6 @@
 import html
 import textwrap
+import re
 
 import streamlit as st
 
@@ -109,7 +110,7 @@ def inject_premium_style() -> None:
             animation: floatIn 220ms ease-out;
         }
 
-                /* Generate button styling */
+        /* Generate button styling */
         .stButton > button {
             border-radius: 999px !important;
             border: none !important;
@@ -179,6 +180,27 @@ def build_summary(text: str, length: str) -> str:
         "content": f'Summary length: "{length}".\n\nText:\n{text}',
     }
     return chat_completion([system_message, user_message], temperature=0.5)
+
+
+def clean_dashes_and_fix_punctuation(text: str) -> str:
+    """
+    Remove wide dashes and replace them with commas, keep normal hyphens.
+    """
+    cleaned = text
+
+    # Replace en and em type dashes (with or without spaces) with a comma and a space
+    cleaned = re.sub(r"\s*[\u2013\u2014]\s*", ", ", cleaned)
+
+    # Collapse multiple spaces
+    cleaned = re.sub(r"\s{2,}", " ", cleaned)
+
+    # Fix spacing before commas: " word ," -> " word,"
+    cleaned = re.sub(r"\s+,", ",", cleaned)
+
+    # Avoid double commas: ", ," -> ", "
+    cleaned = re.sub(r",\s*,", ", ", cleaned)
+
+    return cleaned.strip()
 
 
 def render_output_panel(content: str | None) -> str:
@@ -308,8 +330,9 @@ def main() -> None:
 
         with col_right:
             if result_text is not None:
+                cleaned = clean_dashes_and_fix_punctuation(result_text)
                 placeholder.markdown(
-                    render_output_panel(result_text),
+                    render_output_panel(cleaned),
                     unsafe_allow_html=True,
                 )
             elif not run_clicked:
